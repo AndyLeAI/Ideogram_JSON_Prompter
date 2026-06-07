@@ -1,0 +1,17 @@
+Ideogram Box Prompt Builder is a visual layout tool for creating structured bounding-box prompts for Ideogram and other spatially-aware image generation models.
+
+Simply draw boxes directly on the canvas, describe each object, and define its exact position within the scene. The tool automatically converts your layout into normalized JSON coordinates, making it easy to build complex compositions with precise object placement.
+
+Features include:
+
+• Interactive bounding box editor with drag, resize, and selection tools
+• Dark-themed workspace inspired by modern AI creative tools
+• Live object labels displayed directly inside each box
+• Automatic JSON prompt generation
+• PNG metadata import from ComfyUI workflows
+• Background image overlays for scene planning
+• Color palette management for global and per-object styling
+• Direct integration with ComfyUI for image generation
+
+Perfect for artists, prompt engineers, dataset creators, and AI researchers who need accurate control over scene composition and object positioning.
+
