@@ -117,6 +117,18 @@
 
         input[type="range"] { width: 100%; accent-color: var(--primary); }
 
+        .control-block { min-width: 260px; flex: 1; }
+        .aspect-block { min-width: 310px; flex: 1.1; }
+        .aspect-select {
+            font-size: 18px;
+            font-weight: 800;
+            padding: 13px 15px;
+            border-radius: 18px;
+            background: #080d1c;
+            border: 1px solid rgba(139,124,255,.55);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 0 0 4px rgba(124,92,255,.10);
+        }
+
         button {
             background: linear-gradient(135deg, var(--primary), #9a6bff);
             color: white;
@@ -264,13 +276,31 @@
 <body>
 
     <div class="header-controls">
-        <div style="width: 30%;">
-            <label>Width: <span id="w-val">1024</span></label>
-            <input type="range" id="canvas-width" min="256" max="4096" step="16" value="1024" style="width: 80%;">
+        <div class="aspect-block">
+            <label>Aspect Ratio</label>
+            <select id="aspect-ratio" class="aspect-select" onchange="applyAspectPreset()">
+                <option value="original">Keep original image size</option>
+                <option value="1024x1024" selected>1:1 — 1024×1024</option>
+                <option value="1280x720">16:9 — 1280×720</option>
+                <option value="720x1280">9:16 — 720×1280</option>
+                <option value="1152x864">4:3 — 1152×864</option>
+                <option value="864x1152">3:4 — 864×1152</option>
+                <option value="1088x720">3:2 — 1088×720</option>
+                <option value="720x1088">2:3 — 720×1088</option>
+                <option value="1280x800">16:10 — 1280×800</option>
+                <option value="800x1280">10:16 — 800×1280</option>
+                <option value="1568x672">21:9 — 1568×672</option>
+                <option value="720x1600">9:20 — 720×1600</option>
+                <option value="custom">Custom — 1024×1024 (1:1)</option>
+            </select>
         </div>
-        <div style="width: 30%;">
+        <div class="control-block">
+            <label>Width: <span id="w-val">1024</span></label>
+            <input type="range" id="canvas-width" min="256" max="4096" step="16" value="1024">
+        </div>
+        <div class="control-block">
             <label>Height: <span id="h-val">1024</span></label>
-            <input type="range" id="canvas-height" min="256" max="4096" step="16" value="1024" style="width: 80%;">
+            <input type="range" id="canvas-height" min="256" max="4096" step="16" value="1024">
         </div>
         <button onclick="initCanvas()">Go (Reset Canvas)</button>
     </div>
@@ -366,13 +396,22 @@
         const canvas = document.getElementById('canvas-wrapper');
         const canvasWSlider = document.getElementById('canvas-width');
         const canvasHSlider = document.getElementById('canvas-height');
+        const aspectSelect = document.getElementById('aspect-ratio');
         const seedSlider = document.getElementById('r-seed');
         const boxPanel = document.getElementById('box-panel');
         const jsonOutput = document.getElementById('json-output')
 
         // UI Listeners for sliders
-        canvasWSlider.addEventListener('input', e => document.getElementById('w-val').innerText = e.target.value.toString().padStart(4, '0'));
-        canvasHSlider.addEventListener('input', e => document.getElementById('h-val').innerText = e.target.value.toString().padStart(4, '0'));
+        function syncSizeLabels() {
+            document.getElementById('w-val').innerText = canvasWSlider.value.toString().padStart(4, '0');
+            document.getElementById('h-val').innerText = canvasHSlider.value.toString().padStart(4, '0');
+            if (aspectSelect.value === 'custom') {
+                aspectSelect.options[aspectSelect.selectedIndex].text = `Custom — ${canvasWSlider.value}×${canvasHSlider.value}`;
+            }
+        }
+
+        canvasWSlider.addEventListener('input', () => { aspectSelect.value = 'custom'; syncSizeLabels(); });
+        canvasHSlider.addEventListener('input', () => { aspectSelect.value = 'custom'; syncSizeLabels(); });
         seedSlider.addEventListener('input', e => document.getElementById('r-seed-value').innerText = e.target.value.toString().padStart(5, '0'));
 
         document.addEventListener('dragover', (e) => {
@@ -385,6 +424,26 @@
                 importImage(e.dataTransfer.files[0]); // is async
             }
         });
+
+        let defaultExampleImage = 'example.png';
+        let defaultExampleSize = { width: 1024, height: 1024 };
+
+        function setCanvasSize(width, height) {
+            canvasWSlider.value = Math.round(width);
+            canvasHSlider.value = Math.round(height);
+            syncSizeLabels();
+        }
+
+        function applyAspectPreset() {
+            const value = aspectSelect.value;
+            if (value === 'original') {
+                setCanvasSize(defaultExampleSize.width, defaultExampleSize.height);
+            } else if (value !== 'custom') {
+                const [w, h] = value.split('x').map(Number);
+                setCanvasSize(w, h);
+            }
+            initCanvas();
+        }
 
         function initCanvas() {
             canvasW = parseInt(canvasWSlider.value);
@@ -620,16 +679,29 @@
         }
 
         function setDefaultCanvasBackground() {
-            const applyBg = (fileName) => {
+            const applyBg = (fileName, img) => {
+                defaultExampleImage = fileName;
+                if (img && img.naturalWidth && img.naturalHeight) {
+                    defaultExampleSize = { width: img.naturalWidth, height: img.naturalHeight };
+                }
                 canvas.style.backgroundImage = `linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px), url('${fileName}')`;
                 canvas.style.backgroundSize = '64px 64px, 64px 64px, cover';
                 canvas.style.backgroundPosition = 'center, center, center';
+                canvas.style.backgroundRepeat = 'repeat, repeat, no-repeat';
             };
 
-            const testImage = new Image();
-            testImage.onload = () => applyBg('example.png');
-            testImage.onerror = () => applyBg('example.jpg');
-            testImage.src = 'example.png';
+            const png = new Image();
+            png.onload = () => applyBg('example.png', png);
+            png.onerror = () => {
+                const jpg = new Image();
+                jpg.onload = () => applyBg('example.jpg', jpg);
+                jpg.onerror = () => {
+                    canvas.style.backgroundImage = `linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px)`;
+                    canvas.style.backgroundSize = '64px 64px, 64px 64px';
+                };
+                jpg.src = 'example.jpg';
+            };
+            png.src = 'example.png';
         }
 
         function fitCanvasToShell() {
@@ -966,6 +1038,8 @@
                     canvasWSlider.dispatchEvent(new Event('input'));
                     canvasHSlider.value = this.height.toString();
                     canvasHSlider.dispatchEvent(new Event('input'));
+                    defaultExampleSize = { width: this.width, height: this.height };
+                    aspectSelect.value = 'original';
                     initCanvas();
                     setImage(img.src);
 
@@ -1009,6 +1083,7 @@
             }
         }
 
+        syncSizeLabels();
         initCanvas();
         setPhotoArtstyle(1);
         requestAnimationFrame(fitCanvasToShell);
