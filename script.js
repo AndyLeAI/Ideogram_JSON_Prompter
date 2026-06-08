@@ -1,487 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Prompt Generation Tool</title>
-    <style>
-        :root {
-            --bg-color: #070b16;
-            --bg-soft: #0e1424;
-            --panel-bg: rgba(18, 24, 42, 0.92);
-            --panel-bg-2: rgba(12, 18, 32, 0.92);
-            --border: rgba(130, 145, 190, 0.22);
-            --border-strong: rgba(139, 124, 255, 0.46);
-            --primary: #7c5cff;
-            --primary-2: #22d3ee;
-            --danger: #ff477e;
-            --success: #20d695;
-            --text: #eef2ff;
-            --muted: #a9b3cf;
-            --input-bg: #070c1a;
-            --shadow: 0 20px 70px rgba(0,0,0,.38);
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background:
-                radial-gradient(circle at 15% -10%, rgba(124,92,255,.25), transparent 34%),
-                radial-gradient(circle at 92% 8%, rgba(34,211,238,.14), transparent 28%),
-                linear-gradient(180deg, #080b16 0%, #050813 100%);
-            color: var(--text);
-            margin: 0;
-            min-height: 100vh;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .header-controls,
-        .panel,
-        .canvas-shell,
-        .tool-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(12px);
-        }
-
-        .header-controls {
-            padding: 16px;
-            display: flex;
-            gap: 18px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
-            gap: 16px;
-            align-items: flex-start;
-        }
-
-        .left-col, .right-col {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .panel { padding: 16px; }
-
-        .panel h3 {
-            margin: 0 0 14px;
-            font-size: 14px;
-            letter-spacing: .06em;
-            text-transform: uppercase;
-            color: #dbe3ff;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-        }
-
-        .input-group { margin-bottom: 12px; }
-
-        label, .input-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: .04em;
-            color: #c8d0eb;
-            margin-bottom: 6px;
-        }
-
-        .hint { color: var(--muted); font-size: 13px; line-height: 1.45; }
-
-        input[type="text"], textarea, select {
-            width: 100%;
-            color: var(--text);
-            background: var(--input-bg);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 11px 12px;
-            outline: none;
-            transition: border-color .18s, box-shadow .18s, background .18s;
-        }
-
-        textarea { min-height: 88px; resize: vertical; }
-
-        input[type="text"]:focus, textarea:focus, select:focus {
-            border-color: var(--border-strong);
-            box-shadow: 0 0 0 4px rgba(124,92,255,.16);
-        }
-
-        input[type="range"] { width: 100%; accent-color: var(--primary); }
-
-        .control-block { min-width: 260px; flex: 1; }
-        .aspect-block { min-width: 310px; flex: 1.1; }
-        .aspect-select {
-            font-size: 18px;
-            font-weight: 800;
-            padding: 13px 15px;
-            border-radius: 18px;
-            background: #080d1c;
-            border: 1px solid rgba(139,124,255,.55);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 0 0 4px rgba(124,92,255,.10);
-        }
-
-        button {
-            background: linear-gradient(135deg, var(--primary), #9a6bff);
-            color: white;
-            border: 0;
-            padding: 11px 16px;
-            border-radius: 14px;
-            cursor: pointer;
-            font-weight: 900;
-            letter-spacing: .01em;
-            box-shadow: 0 12px 30px rgba(124,92,255,.28);
-            transition: transform .15s, filter .15s;
-        }
-
-        button:hover { transform: translateY(-1px); filter: brightness(1.08); }
-        button:active { transform: translateY(0); }
-
-        .btn-success { background: linear-gradient(135deg, #17c987, #22d3ee); box-shadow: 0 12px 30px rgba(34,211,238,.18); }
-        .btn-danger { background: linear-gradient(135deg, #ff477e, #ff2e63); box-shadow: 0 12px 30px rgba(255,71,126,.22); }
-
-        .canvas-shell {
-            width: 100%;
-            padding: 18px;
-            overflow: auto;
-            max-height: 860px;
-            min-height: 560px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            scrollbar-color: rgba(124,92,255,.65) rgba(10,15,28,.65);
-            scrollbar-width: thin;
-        }
-
-        .canvas-shell::-webkit-scrollbar { width: 10px; height: 10px; }
-        .canvas-shell::-webkit-scrollbar-track { background: rgba(10,15,28,.72); border-radius: 999px; }
-        .canvas-shell::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #7c5cff, #22d3ee); border-radius: 999px; border: 2px solid rgba(10,15,28,.72); }
-        .canvas-shell::-webkit-scrollbar-corner { background: rgba(10,15,28,.72); }
-
-        #canvas-wrapper {
-            background-color: #111827;
-            background-image:
-                linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px),
-                url('example.png');
-            background-size: 64px 64px, 64px 64px, cover;
-            background-position: center, center, center;
-            border: 1px solid rgba(255,255,255,.16);
-            border-radius: 18px;
-            position: relative;
-            transform-origin: top left;
-            overflow: hidden;
-            user-select: none;
-            touch-action: none;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 25px 80px rgba(0,0,0,.45);
-            flex-shrink: 0;
-            margin: 0 auto;
-        }
-
-        #canvas-wrapper::after {
-            content: attr(data-size);
-            position: absolute;
-            left: 16px;
-            top: 12px;
-            color: rgba(238,242,255,.42);
-            font-weight: 900;
-            font-size: 18px;
-            pointer-events: none;
-        }
-
-        .bounding-box {
-            position: absolute;
-            border: 2px solid #ff5b82;
-            background: rgba(255, 91, 130, 0.16);
-            cursor: grab;
-            box-sizing: border-box;
-            border-radius: 8px;
-            box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 10px 28px rgba(0,0,0,.24);
-        }
-
-        .bounding-box.selected {
-            border-color: #9b7cff;
-            background: rgba(124, 92, 255, 0.18);
-            z-index: 10;
-            box-shadow:
-                0 0 0 1px rgba(255,255,255,.22),
-                0 0 0 4px rgba(124,92,255,.20),
-                0 0 34px rgba(124,92,255,.55),
-                0 10px 28px rgba(0,0,0,.28);
-        }
-
-        .box-label {
-            position: absolute;
-            left: 0;
-            top: 0;
-            max-width: 100%;
-            height: 28px;
-            line-height: 28px;
-            padding: 0 10px;
-            border-radius: 6px 0 8px 0;
-            background: linear-gradient(90deg, rgba(255,91,130,.94), rgba(255,130,84,.88));
-            color: #fff;
-            font-weight: 800;
-            font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            pointer-events: none;
-            text-shadow: 0 1px 1px rgba(0,0,0,.25);
-        }
-
-        .bounding-box.selected .box-label { background: linear-gradient(90deg, rgba(34,211,238,.92), rgba(124,92,255,.88)); }
-
-        .resize-handle {
-            position: absolute;
-            width: 13px;
-            height: 13px;
-            background: #ffffff;
-            border: 2px solid #0f172a;
-            right: -7px;
-            bottom: -7px;
-            cursor: nwse-resize;
-            border-radius: 50%;
-        }
-
-        .color-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
-        .swatch { width: 32px; height: 32px; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: transparent; transition: .2s; }
-        .swatch:hover { color: #fff; text-shadow: 0 1px 3px #000; transform: translateY(-1px); }
-
-        #json-output { width: 100%; height: 280px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 12px; }
-        #image-view { max-height: 800px; object-fit: scale-down; border-radius: 18px; border: 1px solid var(--border); background: var(--panel-bg-2); }
-
-        .pill-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .pill-group input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
-        .pill-label { display: inline-block; padding: 8px 14px; background-color: #0a1020; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 800; }
-        .pill-group input[type="radio"]:checked + .pill-label { background: linear-gradient(135deg, #2563eb, #7c5cff); color: white; border-color: transparent; }
-        .pill-group p { margin: 0; color: var(--muted); font-weight: 800; }
-
-
-
-        .quick-toolbar {
-            display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-            background:rgba(12,18,32,.75); border:1px solid var(--border);
-            border-radius:18px; padding:10px; box-shadow:var(--shadow);
-        }
-        .quick-toolbar button, .quick-toolbar select {
-            width:auto; min-width:auto; font-size:12px; padding:8px 10px; border-radius:12px;
-        }
-        .quick-toolbar .mini-btn {
-            background:#0a1020; color:#dbe3ff; border:1px solid var(--border); box-shadow:none;
-        }
-        .quick-toolbar .mini-btn.active {
-            background:linear-gradient(135deg, rgba(34,211,238,.85), rgba(124,92,255,.9));
-            color:white; border-color:transparent;
-        }
-        .toolbar-divider { width:1px; height:25px; background:var(--border); margin:0 2px; }
-        .inline-check { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; font-weight:800; }
-        .layers-panel { padding:16px; }
-        .layers-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-        #layers-list { display:flex; flex-direction:column; gap:8px; max-height:280px; overflow:auto; padding-right:4px; }
-        .layer-item {
-            display:grid; grid-template-columns: 24px 1fr auto; gap:8px; align-items:center;
-            padding:10px; border:1px solid var(--border); border-radius:14px;
-            background:rgba(7,12,26,.72); cursor:pointer;
-        }
-        .layer-item.selected { border-color:var(--border-strong); background:rgba(124,92,255,.16); box-shadow:0 0 0 3px rgba(124,92,255,.12); }
-        .layer-title { font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#eef2ff; }
-        .layer-meta { font-size:10px; color:var(--muted); margin-top:3px; font-family:ui-monospace, monospace; }
-        .layer-actions { display:flex; gap:4px; }
-        .layer-actions button { padding:5px 7px; border-radius:8px; box-shadow:none; font-size:11px; }
-        .json-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-        .resize-handle-n  { top:-6px; left:50%; transform:translateX(-50%); width:28px; height:10px; cursor:ns-resize; border-radius:8px; }
-        .resize-handle-s  { bottom:-6px; left:50%; transform:translateX(-50%); width:28px; height:10px; cursor:ns-resize; border-radius:8px; }
-        .resize-handle-e  { right:-6px; top:50%; transform:translateY(-50%); width:10px; height:28px; cursor:ew-resize; border-radius:8px; }
-        .resize-handle-w  { left:-6px; top:50%; transform:translateY(-50%); width:10px; height:28px; cursor:ew-resize; border-radius:8px; }
-        .resize-handle-nw { top:-7px; left:-7px; cursor:nwse-resize; }
-        .resize-handle-ne { top:-7px; right:-7px; cursor:nesw-resize; }
-        .resize-handle-sw { bottom:-7px; left:-7px; cursor:nesw-resize; }
-        .resize-handle-se { bottom:-7px; right:-7px; cursor:nwse-resize; }
-
-        .layer-delete-btn {
-            width: 26px;
-            height: 26px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            background: rgba(244,63,94,.16);
-            color: #fb7185;
-            border: 1px solid rgba(244,63,94,.36);
-            font-size: 15px;
-            font-weight: 900;
-            line-height: 1;
-        }
-        .layer-delete-btn:hover {
-            background: rgba(244,63,94,.28);
-            color: #fff;
-            transform: none;
-        }
-        .snap-line { position:absolute; pointer-events:none; z-index:99; background:rgba(34,211,238,.75); box-shadow:0 0 12px rgba(34,211,238,.6); }
-        .snap-line.v { width:1px; top:0; bottom:0; }
-        .snap-line.h { height:1px; left:0; right:0; }
-
-        @media (max-width: 1050px) {
-            .main-content { grid-template-columns: 1fr; }
-            .right-col { width: 100%; }
-        }
-    </style>
-
-</head>
-
-<body>
-
-    <div class="header-controls">
-        <div class="aspect-block">
-            <label>Aspect Ratio</label>
-            <select id="aspect-ratio" class="aspect-select" onchange="applyAspectPreset()">
-                <option value="original">Keep original image size</option>
-                <option value="1024x1024" selected>1:1 — 1024×1024</option>
-                <option value="1280x720">16:9 — 1280×720</option>
-                <option value="720x1280">9:16 — 720×1280</option>
-                <option value="1152x864">4:3 — 1152×864</option>
-                <option value="864x1152">3:4 — 864×1152</option>
-                <option value="1088x720">3:2 — 1088×720</option>
-                <option value="720x1088">2:3 — 720×1088</option>
-                <option value="1280x800">16:10 — 1280×800</option>
-                <option value="800x1280">10:16 — 800×1280</option>
-                <option value="1568x672">21:9 — 1568×672</option>
-                <option value="720x1600">9:20 — 720×1600</option>
-                <option value="custom">Custom — 1024×1024 (1:1)</option>
-            </select>
-        </div>
-        <div class="control-block">
-            <label>Width: <span id="w-val">1024</span></label>
-            <input type="range" id="canvas-width" min="256" max="4096" step="16" value="1024">
-        </div>
-        <div class="control-block">
-            <label>Height: <span id="h-val">1024</span></label>
-            <input type="range" id="canvas-height" min="256" max="4096" step="16" value="1024">
-        </div>
-        <button onclick="initCanvas()">Go (Reset Canvas)</button>
-    </div>
-
-    <div class="main-content">
-        <div class="left-col">
-            <div class="hint">Click and drag on the canvas to create bounding boxes. Drag a PNG from ComfyUI to import its boxes and prompts.</div>
-            <div class="quick-toolbar">
-                <button class="mini-btn" id="undo-btn" onclick="undoState()">↶ Undo</button>
-                <button class="mini-btn" id="redo-btn" onclick="redoState()">↷ Redo</button>
-                <span class="toolbar-divider"></span>
-                <select id="preset-selector" onchange="loadLayoutPreset(this.value)">
-                    <option value="">Preset Layout...</option>
-                    <option value="cinematic">🎬 Cinematic Landscape</option>
-                    <option value="product">◇ Minimal Product</option>
-                    <option value="portrait">👤 Portrait Studio</option>
-                    <option value="editorial">📰 Bold Editorial</option>
-                    <option value="tech">⚡ Cyber Tech</option>
-                    <option value="nature">🌿 Natural Serenity</option>
-                </select>
-                <button class="mini-btn active" id="snap-toggle" onclick="toggleSnap()">⊞ Snap</button>
-                <span class="toolbar-divider"></span>
-                <button class="mini-btn" onclick="alignSelected('left')">Left</button>
-                <button class="mini-btn" onclick="alignSelected('center-h')">Center H</button>
-                <button class="mini-btn" onclick="alignSelected('right')">Right</button>
-                <button class="mini-btn" onclick="alignSelected('top')">Top</button>
-                <button class="mini-btn" onclick="alignSelected('center-v')">Center V</button>
-                <button class="mini-btn" onclick="alignSelected('bottom')">Bottom</button>
-                <button class="mini-btn" onclick="addPresetBox()">+ New Layer</button>
-            </div>
-            <div class="canvas-shell">
-                <div id="canvas-wrapper"></div>
-            </div>
-
-            <div class="json-actions">
-                <button class="btn-success" onclick="generateJSON()">Generate JSON Prompt</button>
-                <button class="mini-btn" onclick="copyJSON()">Copy JSON</button>
-                <label class="inline-check"><input type="checkbox" id="minify-json" onchange="generateJSON()"> Minify</label>
-                <label class="inline-check"><input type="checkbox" id="strict-json" checked onchange="generateJSON()"> Strict: skip empty fields</label>
-            </div>
-            <textarea id="json-output" placeholder="JSON will appear here..."></textarea>
-        <div>
-            <label>Seed: <span id="r-seed-value">42</span></label>
-            <input type="range" id="r-seed" min="1" max="99999" step="1" value="42">
-        </div>
-        <div>
-            <label>Comfy API:</label>
-            <input type="text" id="api-location" value="http://localhost:8188">
-        </div>
-            <button class="btn-success" onclick="generateImage()">Generate Image</button>
-            <img id="image-view" style="max-height: 800px; object-fit: scale-down;">
-        </div>
-
-        <div class="right-col">
-            <div class="panel">
-                <h3>Global Settings</h3>
-                <div class="pill-group">
-                    <p style="margin: 0;">Mode:</p>
-                    <input type="radio" id="mode_photo" name="art_mode" value="photo" onchange="setPhotoArtstyle(0)">
-                    <label for="mode_photo" class="pill-label">photo</label>
-
-                    <input type="radio" id="mode_artstyle" name="art_mode" value="art_style" checked onchange="setPhotoArtstyle(1)">
-                    <label for="mode_artstyle" class="pill-label">art_style</label>
-                </div>
-                <br>
-                <div class="input-group"><label>High Level Description</label><input type="text"
-                        id="high_level_description"></div>
-                <div class="input-group"><label>Aesthetics</label><input type="text" id="aesthetics"></div>
-                <div class="input-group"><label>Lighting</label><input type="text" id="lighting"></div>
-                <div class="input-group"><label>Medium</label><input type="text" id="medium"></div>
-                <div class="input-group"><label id="mode_label">Art Style</label><input type="text" id="art_style"></div>
-                <div class="input-group"><label>Background</label><textarea id="background"></textarea></div>
-                <div class="input-group">
-                    <label>Global Color Palette (Max 16)</label>
-                    <input type="color" id="global-color-picker">
-                    <button onclick="addColor('global')">Add</button>
-                    <div id="global-colors" class="color-list"></div>
-                </div>
-            </div>
-
-            <div class="panel layers-panel">
-                <div class="layers-header">
-                    <h3 style="margin:0;border:0;padding:0;">Layers / Elements</h3>
-                    <button class="mini-btn" onclick="addPresetBox()">+ Add</button>
-                </div>
-                <div id="layers-list"></div>
-            </div>
-
-            <div class="panel" id="box-panel" style="display: none;">
-                <h3>Selected Box Properties</h3>
-                <div class="input-group">
-                    <label>Mode</label>
-                    <select id="box-mode" onchange="updateBoxData()" onkeypress = "this.onchange();" onpaste    = "this.onchange();" oninput    = "this.onchange();">
-                        <option value="obj">Object (obj)</option>
-                        <option value="text">Text (text)</option>
-                    </select>
-                </div>
-                <div class="input-group" id="text-input-group" style="display: none;">
-                    <label>Text Content</label>
-                    <input type="text" id="box-text" onchange="updateBoxData()" onkeypress = "this.onchange();" onpaste    = "this.onchange();" oninput    = "this.onchange();">
-                </div>
-                <div class="input-group">
-                    <label>Description</label>
-                    <textarea id="box-desc" onchange="updateBoxData()" onkeypress = "this.onchange();" onpaste    = "this.onchange();" oninput    = "this.onchange();"></textarea>
-                </div>
-                <div class="input-group">
-                    <label>Box Color Palette (Max 5)</label>
-                    <input type="color" id="box-color-picker">
-                    <button onclick="addColor('box')">Add</button>
-                    <div id="box-colors" class="color-list"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
         var json_prompt = JSON.parse(atob("eyIyNSI6eyJpbnB1dHMiOnsiaW1hZ2VzIjpbIjk4OjEzIiwwXX0sImNsYXNzX3R5cGUiOiJQcmV2aWV3SW1hZ2UiLCJfbWV0YSI6eyJ0aXRsZSI6IlByZXZpZXcgSW1hZ2UifX0sIjk4OjkiOnsiaW5wdXRzIjp7InZhZV9uYW1lIjoiZmx1eDItdmFlLnNhZmV0ZW5zb3JzIn0sImNsYXNzX3R5cGUiOiJWQUVMb2FkZXIiLCJfbWV0YSI6eyJ0aXRsZSI6IkxvYWQgVkFFIn19LCI5ODoxMCI6eyJpbnB1dHMiOnsiY29uZGl0aW9uaW5nIjpbIjk4OjI0IiwwXX0sImNsYXNzX3R5cGUiOiJDb25kaXRpb25pbmdaZXJvT3V0IiwiX21ldGEiOnsidGl0bGUiOiJDb25kaXRpb25pbmdaZXJvT3V0In19LCI5ODoxMSI6eyJpbnB1dHMiOnsid2lkdGgiOlsiOTg6MzEiLDFdLCJoZWlnaHQiOlsiOTg6MzIiLDFdLCJiYXRjaF9zaXplIjoxfSwiY2xhc3NfdHlwZSI6IkVtcHR5Rmx1eDJMYXRlbnRJbWFnZSIsIl9tZXRhIjp7InRpdGxlIjoiRW1wdHkgRmx1eCAyIExhdGVudCJ9fSwiOTg6MTIiOnsiaW5wdXRzIjp7Im5vaXNlIjpbIjk4OjE4IiwwXSwiZ3VpZGVyIjpbIjk4OjE1NSIsMF0sInNhbXBsZXIiOlsiOTg6MTYiLDBdLCJzaWdtYXMiOlsiOTg6MTciLDBdLCJsYXRlbnRfaW1hZ2UiOlsiOTg6MTEiLDBdfSwiY2xhc3NfdHlwZSI6IlNhbXBsZXJDdXN0b21BZHZhbmNlZCIsIl9tZXRhIjp7InRpdGxlIjoiU2FtcGxlckN1c3RvbUFkdmFuY2VkIn19LCI5ODoxMyI6eyJpbnB1dHMiOnsic2FtcGxlcyI6WyI5ODoxMiIsMF0sInZhZSI6WyI5ODo5IiwwXX0sImNsYXNzX3R5cGUiOiJWQUVEZWNvZGUiLCJfbWV0YSI6eyJ0aXRsZSI6IlZBRSBEZWNvZGUifX0sIjk4OjE2Ijp7ImlucHV0cyI6eyJzYW1wbGVyX25hbWUiOiJyZXNfbXVsdGlzdGVwIn0sImNsYXNzX3R5cGUiOiJLU2FtcGxlclNlbGVjdCIsIl9tZXRhIjp7InRpdGxlIjoiS1NhbXBsZXJTZWxlY3QifX0sIjk4OjE3Ijp7ImlucHV0cyI6eyJzdGVwcyI6WyI5ODoxNTEiLDFdLCJ3aWR0aCI6WyI5ODozMSIsMV0sImhlaWdodCI6WyI5ODozMiIsMV0sIm11IjpbIjk4OjE0NCIsMF0sInN0ZCI6WyI5ODoxNDYiLDBdfSwiY2xhc3NfdHlwZSI6IklkZW9ncmFtNFNjaGVkdWxlciIsIl9tZXRhIjp7InRpdGxlIjoiSWRlb2dyYW0gNCBTY2hlZHVsZXIifX0sIjk4OjE4Ijp7ImlucHV0cyI6eyJub2lzZV9zZWVkIjo0MjU2OTI1MzAzMDkyNTB9LCJjbGFzc190eXBlIjoiUmFuZG9tTm9pc2UiLCJfbWV0YSI6eyJ0aXRsZSI6IlJhbmRvbU5vaXNlIn19LCI5ODoyMyI6eyJpbnB1dHMiOnsidW5ldF9uYW1lIjoiaWRlb2dyYW00X2ZwOF9zY2FsZWQuc2FmZXRlbnNvcnMiLCJ3ZWlnaHRfZHR5cGUiOiJkZWZhdWx0In0sImNsYXNzX3R5cGUiOiJVTkVUTG9hZGVyIiwiX21ldGEiOnsidGl0bGUiOiJMb2FkIERpZmZ1c2lvbiBNb2RlbCJ9fSwiOTg6MjQiOnsiaW5wdXRzIjp7InRleHQiOiJBU0RGQVNERiIsImNsaXAiOlsiOTg6MTQiLDBdfSwiY2xhc3NfdHlwZSI6IkNMSVBUZXh0RW5jb2RlIiwiX21ldGEiOnsidGl0bGUiOiJDTElQIFRleHQgRW5jb2RlIChQb3NpdGl2ZSBQcm9tcHQpIn19LCI5ODoxNCI6eyJpbnB1dHMiOnsiY2xpcF9uYW1lIjoicXdlbjN2bF84Yl9mcDhfc2NhbGVkLnNhZmV0ZW5zb3JzIiwidHlwZSI6ImlkZW9ncmFtNCIsImRldmljZSI6ImRlZmF1bHQifSwiY2xhc3NfdHlwZSI6IkNMSVBMb2FkZXIiLCJfbWV0YSI6eyJ0aXRsZSI6IkxvYWQgQ0xJUCJ9fSwiOTg6MjciOnsiaW5wdXRzIjp7InZhbHVlIjoxMDI0fSwiY2xhc3NfdHlwZSI6IlByaW1pdGl2ZUludCIsIl9tZXRhIjp7InRpdGxlIjoiSW50IChXaWR0aCkifX0sIjk4OjI4Ijp7ImlucHV0cyI6eyJ2YWx1ZSI6MTAyNH0sImNsYXNzX3R5cGUiOiJQcmltaXRpdmVJbnQiLCJfbWV0YSI6eyJ0aXRsZSI6IkludCAoSGVpZ2h0KSJ9fSwiOTg6MzEiOnsiaW5wdXRzIjp7ImV4cHJlc3Npb24iOiJtYXgoKChhICsgMTUpIC8vIDE2KSAqIDE2LCAyNTYpIiwidmFsdWVzLmEiOlsiOTg6MjciLDBdfSwiY2xhc3NfdHlwZSI6IkNvbWZ5TWF0aEV4cHJlc3Npb24iLCJfbWV0YSI6eyJ0aXRsZSI6Ik1hdGggRXhwcmVzc2lvbiJ9fSwiOTg6MzIiOnsiaW5wdXRzIjp7ImV4cHJlc3Npb24iOiJtYXgoKChhICsgMTUpIC8vIDE2KSAqIDE2LCAyNTYpIiwidmFsdWVzLmEiOlsiOTg6MjgiLDBdfSwiY2xhc3NfdHlwZSI6IkNvbWZ5TWF0aEV4cHJlc3Npb24iLCJfbWV0YSI6eyJ0aXRsZSI6Ik1hdGggRXhwcmVzc2lvbiJ9fSwiOTg6MTQ0Ijp7ImlucHV0cyI6eyJ2YWx1ZSI6WyI5ODoxNDUiLDBdfSwiY2xhc3NfdHlwZSI6IkNvbWZ5TnVtYmVyQ29udmVydCIsIl9tZXRhIjp7InRpdGxlIjoiTnVtYmVyIENvbnZlcnQifX0sIjk4OjE0NSI6eyJpbnB1dHMiOnsianNvbl9zdHJpbmciOlsiOTg6MTQ4IiwwXSwia2V5IjoibXUifSwiY2xhc3NfdHlwZSI6Ikpzb25FeHRyYWN0U3RyaW5nIiwiX21ldGEiOnsidGl0bGUiOiJFeHRyYWN0IFRleHQgZnJvbSBKU09OIn19LCI5ODoxNDYiOnsiaW5wdXRzIjp7InZhbHVlIjpbIjk4OjE1MCIsMF19LCJjbGFzc190eXBlIjoiQ29tZnlOdW1iZXJDb252ZXJ0IiwiX21ldGEiOnsidGl0bGUiOiJOdW1iZXIgQ29udmVydCJ9fSwiOTg6MTQ3Ijp7ImlucHV0cyI6eyJqc29uX3N0cmluZyI6IntcbiAgXCJRdWFsaXR5XCI6IHtcbiAgICBcIm51bV9zdGVwc1wiOiA0OCxcbiAgICBcIm11XCI6IDAuMCxcbiAgICBcInN0ZFwiOiAxLjUsXG4gICAgXCJwcmVzZXRfaWRcIjogXCJWNF9RVUFMSVRZXzQ4XCJcbiAgfSxcbiAgXCJEZWZhdWx0XCI6IHtcbiAgICBcIm51bV9zdGVwc1wiOiAyMCxcbiAgICBcIm11XCI6IDAuMCxcbiAgICBcInN0ZFwiOiAxLjc1LFxuICAgIFwicHJlc2V0X2lkXCI6IFwiVjRfREVGQVVMVF8yMFwiXG4gIH0sXG4gIFwiVHVyYm9cIjoge1xuICAgIFwibnVtX3N0ZXBzXCI6IDEyLFxuICAgIFwibXVcIjogMC41LFxuICAgIFwic3RkXCI6IDEuNzUsXG4gICAgXCJwcmVzZXRfaWRcIjogXCJWNF9UVVJCT18xMlwiXG4gIH1cbn0iLCJrZXkiOlsiOTg6MTU2IiwwXX0sImNsYXNzX3R5cGUiOiJKc29uRXh0cmFjdFN0cmluZyIsIl9tZXRhIjp7InRpdGxlIjoiRXh0cmFjdCBUZXh0IGZyb20gSlNPTiJ9fSwiOTg6MTQ4Ijp7ImlucHV0cyI6eyJzdHJpbmciOlsiOTg6MTQ3IiwwXSwiZmluZCI6IiciLCJyZXBsYWNlIjoiXCIifSwiY2xhc3NfdHlwZSI6IlN0cmluZ1JlcGxhY2UiLCJfbWV0YSI6eyJ0aXRsZSI6IlJlcGxhY2UgVGV4dCJ9fSwiOTg6MTQ5Ijp7ImlucHV0cyI6eyJqc29uX3N0cmluZyI6WyI5ODoxNDgiLDBdLCJrZXkiOiJudW1fc3RlcHMifSwiY2xhc3NfdHlwZSI6Ikpzb25FeHRyYWN0U3RyaW5nIiwiX21ldGEiOnsidGl0bGUiOiJFeHRyYWN0IFRleHQgZnJvbSBKU09OIn19LCI5ODoxNTAiOnsiaW5wdXRzIjp7Impzb25fc3RyaW5nIjpbIjk4OjE0OCIsMF0sImtleSI6InN0ZCJ9LCJjbGFzc190eXBlIjoiSnNvbkV4dHJhY3RTdHJpbmciLCJfbWV0YSI6eyJ0aXRsZSI6IkV4dHJhY3QgVGV4dCBmcm9tIEpTT04ifX0sIjk4OjE1MSI6eyJpbnB1dHMiOnsidmFsdWUiOlsiOTg6MTQ5IiwwXX0sImNsYXNzX3R5cGUiOiJDb21meU51bWJlckNvbnZlcnQiLCJfbWV0YSI6eyJ0aXRsZSI6Ik51bWJlciBDb252ZXJ0In19LCI5ODoxNTQiOnsiaW5wdXRzIjp7InVuZXRfbmFtZSI6ImlkZW9ncmFtNF91bmNvbmRpdGlvbmFsX2ZwOF9zY2FsZWQuc2FmZXRlbnNvcnMiLCJ3ZWlnaHRfZHR5cGUiOiJkZWZhdWx0In0sImNsYXNzX3R5cGUiOiJVTkVUTG9hZGVyIiwiX21ldGEiOnsidGl0bGUiOiJMb2FkIERpZmZ1c2lvbiBNb2RlbCJ9fSwiOTg6MTU1Ijp7ImlucHV0cyI6eyJjZmciOjcsIm1vZGVsIjpbIjk4OjE1NyIsMF0sInBvc2l0aXZlIjpbIjk4OjI0IiwwXSwibW9kZWxfbmVnYXRpdmUiOlsiOTg6MTU0IiwwXSwibmVnYXRpdmUiOlsiOTg6MTAiLDBdfSwiY2xhc3NfdHlwZSI6IkR1YWxNb2RlbEd1aWRlciIsIl9tZXRhIjp7InRpdGxlIjoiRHVhbCBNb2RlbCBDRkcgR3VpZGVyIn19LCI5ODoxNTYiOnsiaW5wdXRzIjp7ImNob2ljZSI6IkRlZmF1bHQiLCJpbmRleCI6MSwib3B0aW9uMSI6IlF1YWxpdHkiLCJvcHRpb24yIjoiRGVmYXVsdCIsIm9wdGlvbjMiOiJUdXJibyIsIm9wdGlvbjQiOiIifSwiY2xhc3NfdHlwZSI6IkN1c3RvbUNvbWJvIiwiX21ldGEiOnsidGl0bGUiOiJDdXN0b20gQ29tYm8ifX0sIjk4OjE1NyI6eyJpbnB1dHMiOnsiY2ZnIjozLCJzdGFydF9wZXJjZW50IjowLjksImVuZF9wZXJjZW50IjoxLCJtb2RlbCI6WyI5ODoyMyIsMF19LCJjbGFzc190eXBlIjoiQ0ZHT3ZlcnJpZGUiLCJfbWV0YSI6eyJ0aXRsZSI6IkNGRyBPdmVycmlkZSJ9fX0="))
         // State
         let canvasW = 1024;
@@ -648,19 +165,19 @@
                 isResizing = true;
                 currentBoxDOM = e.target.parentElement;
                 selectBox(currentBoxDOM.id);
-                currentBoxDOM.setPointerCapture?.(e.pointerId);
                 const rect = canvas.getBoundingClientRect();
                 dragStartX = (e.clientX - rect.left) / scale;
                 dragStartY = (e.clientY - rect.top) / scale;
-                initialBoxW = parseFloat(currentBoxDOM.style.width);
-                initialBoxH = parseFloat(currentBoxDOM.style.height);
+                initialBoxX = parseFloat(currentBoxDOM.style.left) || 0;
+                initialBoxY = parseFloat(currentBoxDOM.style.top) || 0;
+                initialBoxW = parseFloat(currentBoxDOM.style.width) || 0;
+                initialBoxH = parseFloat(currentBoxDOM.style.height) || 0;
                 resizeDir = e.target.dataset.dir || 'se';
                 e.stopPropagation();
             } else if (e.target.closest('.bounding-box')) {
                 isDragging = true;
                 currentBoxDOM = e.target.closest('.bounding-box');
                 selectBox(currentBoxDOM.id);
-                currentBoxDOM.setPointerCapture?.(e.pointerId);
                 const rect = canvas.getBoundingClientRect();
                 dragStartX = (e.clientX - rect.left) / scale;
                 dragStartY = (e.clientY - rect.top) / scale;
@@ -728,8 +245,10 @@
                 const dx = currentX - dragStartX;
                 const dy = currentY - dragStartY;
 
-                // Resize by the handle being dragged, with the opposite edge locked.
-                // No center reset, no whole-box snap while scaling.
+                // Resize with the opposite edge locked.
+                // Example: dragging the right handle only changes the right edge,
+                // dragging the top handle only changes the top edge, etc.
+                // This prevents the box from expanding in the opposite direction.
                 const minSize = 10;
                 let left = initialBoxX;
                 let top = initialBoxY;
@@ -741,6 +260,7 @@
                 if (resizeDir.includes('s')) bottom = initialBoxY + initialBoxH + dy;
                 if (resizeDir.includes('n')) top = initialBoxY + dy;
 
+                // Clamp to canvas bounds while keeping the opposite side fixed.
                 left = Math.max(0, Math.min(left, canvasW));
                 right = Math.max(0, Math.min(right, canvasW));
                 top = Math.max(0, Math.min(top, canvasH));
@@ -751,6 +271,7 @@
                 if (resizeDir.includes('n') && bottom - top < minSize) top = bottom - minSize;
                 if (resizeDir.includes('s') && bottom - top < minSize) bottom = top + minSize;
 
+                // Final safety clamp.
                 left = Math.max(0, left);
                 top = Math.max(0, top);
                 right = Math.min(canvasW, right);
@@ -874,19 +395,15 @@
             fitCanvasToShell();
         });
 
-        function deleteBoxById(id) {
-            if (!id) return;
-            const dom = document.getElementById(id);
+        function deleteSelectedBox() {
+            if (!selectedBoxId) return;
+            const dom = document.getElementById(selectedBoxId);
             if (dom) dom.remove();
-            boxes = boxes.filter(b => b.id !== id);
-            if (selectedBoxId === id) selectBox(null);
+            boxes = boxes.filter(b => b.id !== selectedBoxId);
+            selectBox(null);
             renderLayers();
             saveState();
             generateJSON();
-        }
-
-        function deleteSelectedBox() {
-            deleteBoxById(selectedBoxId);
         }
 
         // JSON Generation
@@ -1365,11 +882,10 @@
                 const item = document.createElement('div');
                 item.className = 'layer-item' + (box.id === selectedBoxId ? ' selected' : '');
                 item.onclick = () => selectBox(box.id);
-                item.innerHTML = `<div>${box.mode === 'text' ? 'T' : '□'}</div><div><div class="layer-title">${escapeHTML(getBoxTitle(box))}</div><div class="layer-meta">${box.mode} · [${Math.round(box.y)}, ${Math.round(box.x)}, ${Math.round(box.y+box.h)}, ${Math.round(box.x+box.w)}]</div></div><div class="layer-actions"><button title="Up">↑</button><button title="Down">↓</button><button class="layer-delete-btn" title="Delete layer">×</button></div>`;
+                item.innerHTML = `<div>${box.mode === 'text' ? 'T' : '□'}</div><div><div class="layer-title">${escapeHTML(getBoxTitle(box))}</div><div class="layer-meta">${box.mode} · [${Math.round(box.y)}, ${Math.round(box.x)}, ${Math.round(box.y+box.h)}, ${Math.round(box.x+box.w)}]</div></div><div class="layer-actions"><button title="Up">↑</button><button title="Down">↓</button></div>`;
                 const btns = item.querySelectorAll('button');
                 btns[0].onclick = (e) => { e.stopPropagation(); moveLayer(i, -1); };
                 btns[1].onclick = (e) => { e.stopPropagation(); moveLayer(i, 1); };
-                btns[2].onclick = (e) => { e.stopPropagation(); deleteBoxById(box.id); };
                 list.appendChild(item);
             });
         }
@@ -1439,8 +955,4 @@
         generateJSON();
         saveState();
         requestAnimationFrame(fitCanvasToShell);
-    </script>
-
-</body>
-
-</html>
+    
